@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
@@ -71,3 +72,8 @@ export default defineConfig([
   },
 ])
 ```
+=======
+# BPMonitor
+Simple Blood Pressure Monitor
+This is the MD
+>>>>>>> 0b75bbea08d9fdfe3db96950f442e2d4c7637eb2
