@@ -51,7 +51,11 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>
 
-export function BloodPressureForm() {
+interface BloodPressureFormProps {
+  onSuccess?: () => void
+}
+
+export function BloodPressureForm({ onSuccess }: BloodPressureFormProps) {
   const [isLoading, setIsLoading] = React.useState(false)
 
   const form = useForm<FormValues>({
@@ -79,6 +83,8 @@ export function BloodPressureForm() {
         description: `${format(data.date, "PPP")} | ${data.systolic}/${data.diastolic} mmHg`,
       })
       
+      onSuccess?.()
+      
       form.reset({
         systolic: 120,
         diastolic: 80,
@@ -95,7 +101,7 @@ export function BloodPressureForm() {
   }
 
   return (
-    <Card className="w-full max-w-md border-none bg-white/80 shadow-2xl backdrop-blur-xl dark:bg-slate-900/80 sm:rounded-[2.5rem]">
+    <Card className="mx-auto w-full max-w-md border-none bg-white/80 shadow-2xl backdrop-blur-xl dark:bg-slate-900/80 sm:rounded-[2.5rem]">
       <CardHeader className="space-y-1 pb-8 text-center">
         <CardTitle className="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-50">
           Nueva Lectura

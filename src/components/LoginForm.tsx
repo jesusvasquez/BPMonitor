@@ -71,7 +71,7 @@ export function LoginForm() {
   }
 
   return (
-    <Card className="w-full max-w-md border-none bg-white/80 shadow-2xl backdrop-blur-xl dark:bg-slate-900/80 sm:rounded-[2.5rem]">
+    <Card className="mx-auto w-full max-w-md border-none bg-white/80 shadow-2xl backdrop-blur-xl dark:bg-slate-900/80 sm:rounded-[2.5rem]">
       <Tabs defaultValue="login" className="w-full">
         <CardHeader className="space-y-1 pb-4 text-center">
           <CardTitle className="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-50">
