@@ -3,7 +3,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
 import { format } from "date-fns"
-import { Calendar as CalendarIcon, Loader2, Save } from "lucide-react"
+import { Calendar as CalendarIcon, Loader2, Save, Clock } from "lucide-react"
 import { toast } from "sonner"
 import { insertReading } from "@/services/bloodPressure"
 import type { SubmitHandler } from "react-hook-form"
@@ -47,6 +47,7 @@ const formSchema = z.object({
     .min(30, "Valor demasiado bajo")
     .max(220, "Valor demasiado alto"),
   date: z.date(),
+  time: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Formato de hora inválido"),
 })
 
 type FormValues = z.infer<typeof formSchema>
@@ -65,22 +66,33 @@ export function BloodPressureForm({ onSuccess }: BloodPressureFormProps) {
       diastolic: 80,
       pulse: 70,
       date: new Date(),
+      time: format(new Date(), "HH:mm"),
     },
   })
+
+  // Asegurar que la hora se actualice al montar el componente si la página estuvo abierta
+  React.useEffect(() => {
+    form.setValue("time", format(new Date(), "HH:mm"))
+  }, [form])
 
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
     setIsLoading(true)
     
     try {
+      // Combinar fecha y hora
+      const [hours, minutes] = data.time.split(':').map(Number)
+      const combinedDate = new Date(data.date)
+      combinedDate.setHours(hours, minutes, 0, 0)
+
       await insertReading({
         sistolica: data.systolic,
         diastolica: data.diastolic,
         pulso: data.pulse,
-        created_at: data.date.toISOString(),
+        created_at: combinedDate.toISOString(),
       })
       
       toast.success("Lectura guardada", {
-        description: `${format(data.date, "PPP")} | ${data.systolic}/${data.diastolic} mmHg`,
+        description: `${format(combinedDate, "PPP p")} | ${data.systolic}/${data.diastolic} mmHg`,
       })
       
       onSuccess?.()
@@ -90,6 +102,7 @@ export function BloodPressureForm({ onSuccess }: BloodPressureFormProps) {
         diastolic: 80,
         pulse: 70,
         date: new Date(),
+        time: format(new Date(), "HH:mm"),
       })
     } catch (error: any) {
       toast.error("Error al guardar", {
@@ -161,31 +174,49 @@ export function BloodPressureForm({ onSuccess }: BloodPressureFormProps) {
             )}
           </div>
 
-          <div className="space-y-2">
-            <Label className="text-xs font-medium uppercase tracking-wider text-slate-500">Fecha y Hora</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant={"outline"}
-                  className={cn(
-                    "h-12 w-full justify-start rounded-2xl border-slate-200 bg-slate-50/50 px-4 text-left font-normal hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900/50 dark:hover:bg-slate-800",
-                    !form.watch("date") && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-3 h-4 w-4 opacity-50" />
-                  {form.watch("date") ? format(form.watch("date"), "PPP p") : <span>Seleccionar fecha</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0 rounded-3xl border-none shadow-2xl" align="start">
-                <Calendar
-                  mode="single"
-                  selected={form.watch("date")}
-                  onSelect={(date) => date && form.setValue("date", date)}
-                  initialFocus
-                  className="rounded-3xl"
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="text-xs font-medium uppercase tracking-wider text-slate-500">Fecha</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={cn(
+                      "h-12 w-full justify-start rounded-2xl border-slate-200 bg-slate-50/50 px-4 text-left font-normal hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900/50 dark:hover:bg-slate-800",
+                      !form.watch("date") && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-3 h-4 w-4 text-muted-foreground" />
+                    {form.watch("date") ? format(form.watch("date"), "PP") : <span>Fecha</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 rounded-3xl border-none shadow-2xl" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={form.watch("date")}
+                    onSelect={(date) => date && form.setValue("date", date)}
+                    initialFocus
+                    className="rounded-3xl"
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="time" className="text-xs font-medium uppercase tracking-wider text-slate-500">Hora Precisada</Label>
+              <div className="relative group">
+                <Clock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none transition-opacity group-hover:opacity-80" />
+                <Input
+                  id="time"
+                  type="time"
+                  className="h-12 rounded-2xl border-slate-200 bg-slate-50/50 pl-11 pr-4 focus-visible:ring-slate-400 dark:border-slate-800 dark:bg-slate-900/50 transition-all hover:bg-slate-100 dark:hover:bg-slate-800"
+                  {...form.register("time")}
                 />
-              </PopoverContent>
-            </Popover>
+              </div>
+              {form.formState.errors.time && (
+                <p className="text-[10px] font-medium text-red-500">{form.formState.errors.time.message}</p>
+              )}
+            </div>
           </div>
         </CardContent>
         <CardFooter className="pt-4">

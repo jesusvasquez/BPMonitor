@@ -9,8 +9,9 @@ import {
   MoreVertical
 } from "lucide-react"
 import { toast } from "sonner"
+import { Link } from "react-router-dom"
 
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,13 +20,15 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { deleteReading, type Reading } from "@/services/bloodPressure"
 import { EditReadingDialog } from "./EditReadingDialog"
+import { cn } from "@/lib/utils"
 
 interface ReadingsHistoryProps {
   readings: Reading[]
   onRefresh: () => void
+  showAll?: boolean
 }
 
-export function ReadingsHistory({ readings, onRefresh }: ReadingsHistoryProps) {
+export function ReadingsHistory({ readings, onRefresh, showAll = false }: ReadingsHistoryProps) {
   const [editingReading, setEditingReading] = React.useState<Reading | null>(null)
 
   // Log para depuración de sincronización
@@ -82,15 +85,17 @@ export function ReadingsHistory({ readings, onRefresh }: ReadingsHistoryProps) {
 
   return (
     <div className="w-full space-y-6">
-      <div className="flex items-center justify-between px-2">
-        <h2 className="text-2xl font-bold tracking-tight">Historial Detallado</h2>
-        <span className="text-xs font-medium text-slate-500 uppercase tracking-widest bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full">
-          {readings.length} Registros
-        </span>
-      </div>
+      {!showAll && (
+        <div className="flex items-center justify-between px-2">
+          <h2 className="text-2xl font-bold tracking-tight">Historial Detallado</h2>
+          <span className="text-xs font-medium text-slate-500 uppercase tracking-widest bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full">
+            {readings.length} Registros
+          </span>
+        </div>
+      )}
 
       <div className="grid gap-4">
-        {readings.map((reading) => {
+        {(showAll ? readings : readings.slice(0, 5)).map((reading) => {
           const readingDate = typeof reading.created_at === "string" 
             ? parseISO(reading.created_at) 
             : reading.created_at as Date
@@ -166,6 +171,20 @@ export function ReadingsHistory({ readings, onRefresh }: ReadingsHistoryProps) {
           )
         })}
       </div>
+
+      {readings.length > 5 && !showAll && (
+        <div className="flex justify-center pt-2">
+          <Link 
+            to="/history"
+            className={cn(
+              buttonVariants({ variant: "ghost" }),
+              "rounded-full px-8 text-xs font-bold uppercase tracking-widest text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all hover:scale-105 active:scale-95"
+            )}
+          >
+            Ver Historial Completo
+          </Link>
+        </div>
+      )}
 
       <EditReadingDialog 
         reading={editingReading}

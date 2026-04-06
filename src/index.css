@@ -148,3 +148,10 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Ocultar el ícono nativo del selector de hora en navegadores Webkit (Chrome, Edge, Safari) */
+input[type="time"]::-webkit-calendar-picker-indicator {
+  display: none !important;
+  background: none;
+  -webkit-appearance: none;
+}

@@ -1,5 +1,4 @@
 import * as React from "react"
-import { BloodPressureForm } from "@/components/BloodPressureForm"
 import { ThemeToggle } from "@/components/ThemeToggle"
 import { Toaster } from "sonner"
 import { ThemeProvider } from "@/components/theme-provider"
@@ -7,15 +6,16 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext"
 import { LoginForm } from "@/components/LoginForm"
 import { 
   LogOut, 
-  Loader2, 
-  Settings 
+  Settings,
+  HeartPulse 
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { BloodPressureChart } from "@/components/BloodPressureChart"
-import { ReadingsHistory } from "@/components/ReadingsHistory"
 import { ProfileDialog } from "@/components/ProfileDialog"
-import { ExportDropdown } from "@/components/ExportDropdown"
 import { getReadings, type Reading } from "@/services/bloodPressure"
+import { BrowserRouter, Routes, Route } from "react-router-dom"
+import { DashboardView } from "@/components/DashboardView"
+import { ReadingsHistoryView } from "@/components/ReadingsHistoryView"
+import { ScrollToTop } from "@/components/ScrollToTop"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -49,10 +49,8 @@ function AppContent() {
   const fetchReadings = React.useCallback(async () => {
     if (!user) return
     setIsLoading(true)
-    console.log("[App] Iniciando fetchReadings para:", user.email);
     try {
       const data = await getReadings()
-      console.log("[App] Datos recibidos del servicio:", data.length);
       setReadings(data)
     } catch (error) {
       console.error("[App] Error al obtener lecturas:", error)
@@ -67,20 +65,16 @@ function AppContent() {
     }
   }, [user, fetchReadings])
 
-  // Log para rastrear cambios en el estado de readings
-  React.useEffect(() => {
-    console.log("[App] El estado 'readings' ha cambiado. Nuevo tamaño:", readings.length);
-  }, [readings])
-
   return (
     <div className="relative min-h-screen w-full overflow-hidden bg-slate-50 text-slate-900 transition-colors duration-500 dark:bg-[#08090a] dark:text-slate-100">
-      {/* Background Gradients for Apple Aesthetic */}
-      <div className="absolute -top-[10%] -left-[10%] h-[600px] w-[600px] rounded-full bg-blue-400/10 blur-[120px] dark:bg-blue-600/5 transition-opacity" />
-      <div className="absolute -bottom-[10%] -right-[10%] h-[600px] w-[600px] rounded-full bg-purple-400/10 blur-[120px] dark:bg-purple-600/5 transition-opacity" />
+      <div className="pointer-events-none absolute -top-[10%] -left-[10%] h-[600px] w-[600px] rounded-full bg-blue-400/10 blur-[120px] dark:bg-blue-600/5 transition-opacity" />
+      <div className="pointer-events-none absolute -bottom-[10%] -right-[10%] h-[600px] w-[600px] rounded-full bg-purple-400/10 blur-[120px] dark:bg-purple-600/5 transition-opacity" />
       
       <header className="fixed top-0 left-0 right-0 z-50 flex h-20 items-center justify-between px-6 backdrop-blur-xl lg:px-12 border-b border-slate-200/50 dark:border-slate-800/50">
         <div className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-xl bg-slate-900 shadow-lg dark:bg-slate-50" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 shadow-lg dark:bg-slate-50">
+            <HeartPulse className="h-6 w-6 text-white dark:text-slate-900" />
+          </div>
           <span className="text-xl font-bold tracking-tight">BP Monitor</span>
         </div>
         <div className="flex items-center gap-3">
@@ -151,27 +145,22 @@ function AppContent() {
                 </div>
               </div>
 
-              <div className="grid gap-12 lg:grid-cols-1">
-                <BloodPressureForm onSuccess={fetchReadings} />
-                
-                {isLoading && readings.length === 0 ? (
-                  <div className="flex h-64 items-center justify-center rounded-[2.5rem] bg-white/20 backdrop-blur-xl">
-                    <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
-                  </div>
-                ) : readings.length > 0 ? (
-                  <>
-                    <div className="flex justify-end mb-[-40px] relative z-10">
-                      <ExportDropdown readings={readings} />
-                    </div>
-                    <BloodPressureChart data={readings} />
-                    <ReadingsHistory readings={readings} onRefresh={fetchReadings} />
-                  </>
-                ) : (
-                  <div className="rounded-[2.5rem] bg-white/20 p-12 text-center backdrop-blur-xl dark:bg-slate-900/20 border border-white/20">
-                    <p className="text-slate-500 font-medium">Aún no tienes lecturas registradas.</p>
-                    <p className="text-xs text-slate-400 mt-2">Usa el formulario de arriba para comenzar tu seguimiento.</p>
-                  </div>
-                )}
+              <div className="w-full">
+                <Routes>
+                  <Route path="/" element={
+                    <DashboardView 
+                      readings={readings} 
+                      isLoading={isLoading} 
+                      fetchReadings={fetchReadings} 
+                    />
+                  } />
+                  <Route path="/history" element={
+                    <ReadingsHistoryView 
+                      readings={readings} 
+                      onRefresh={fetchReadings} 
+                    />
+                  } />
+                </Routes>
               </div>
 
               <p className="px-8 text-center text-[10px] text-slate-500/60 leading-relaxed max-w-md mx-auto">
@@ -192,9 +181,12 @@ function AppContent() {
 function App() {
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-      <AuthProvider>
-        <AppContent />
-      </AuthProvider>
+      <BrowserRouter>
+        <ScrollToTop />
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
+      </BrowserRouter>
     </ThemeProvider>
   )
 }

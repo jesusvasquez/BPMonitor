@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { format } from "date-fns"
-import { CalendarIcon, Loader2 } from "lucide-react"
+import { CalendarIcon, Loader2, Clock } from "lucide-react"
 import { es } from "date-fns/locale"
 import { toast } from "sonner"
 
@@ -35,6 +35,7 @@ const formSchema = z.object({
   diastolic: z.number().min(30, "Mínimo 30").max(200, "Máximo 200"),
   pulse: z.number().min(30, "Mínimo 30").max(250, "Máximo 250"),
   date: z.date(),
+  time: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Formato de hora inválido"),
 })
 
 type FormValues = {
@@ -42,6 +43,7 @@ type FormValues = {
   diastolic: number
   pulse: number
   date: Date
+  time: string
 }
 
 interface EditReadingDialogProps {
@@ -61,16 +63,19 @@ export function EditReadingDialog({ reading, open, onOpenChange, onSuccess }: Ed
       diastolic: 80,
       pulse: 70,
       date: new Date(),
+      time: "12:00",
     }
   })
 
   React.useEffect(() => {
     if (reading && open) {
+      const date = typeof reading.created_at === 'string' ? new Date(reading.created_at) : reading.created_at
       form.reset({
         systolic: reading.sistolica,
         diastolic: reading.diastolica,
         pulse: reading.pulso,
-        date: typeof reading.created_at === 'string' ? new Date(reading.created_at) : reading.created_at,
+        date: date,
+        time: format(date, "HH:mm"),
       })
     }
   }, [reading, open, form])
@@ -78,13 +83,20 @@ export function EditReadingDialog({ reading, open, onOpenChange, onSuccess }: Ed
   async function onSubmit(values: FormValues) {
     if (!reading?.id) return
     setIsLoading(true)
-    console.log("[EditReadingDialog] Enviando actualización para ID:", reading.id, values);
+    
     try {
+      // Combinar fecha y hora
+      const [hours, minutes] = values.time.split(':').map(Number)
+      const combinedDate = new Date(values.date)
+      combinedDate.setHours(hours, minutes, 0, 0)
+
+      console.log("[EditReadingDialog] Enviando actualización para ID:", reading.id, { ...values, combinedDate });
+      
       await updateReading(reading.id, {
         sistolica: values.systolic,
         diastolica: values.diastolic,
         pulso: values.pulse,
-        created_at: values.date.toISOString(),
+        created_at: combinedDate.toISOString(),
       })
       toast.success("Lectura actualizada")
       onSuccess()
@@ -167,48 +179,71 @@ export function EditReadingDialog({ reading, open, onOpenChange, onSuccess }: Ed
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="date"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel className="text-xs font-semibold uppercase tracking-wider text-slate-500">Fecha y Hora</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant={"outline"}
-                          className={cn(
-                            "w-full pl-3 text-left font-normal rounded-2xl h-11 bg-slate-50 border-slate-100 dark:bg-slate-800 dark:border-slate-700",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          {field.value instanceof Date ? (
-                            format(field.value, "PPP p", { locale: es })
-                          ) : (
-                            <span>Seleccionar fecha</span>
-                          )}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0 rounded-3xl overflow-hidden border-none shadow-2xl" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        disabled={(date) =>
-                          date > new Date() || date < new Date("1900-01-01")
-                        }
-                        initialFocus
-                        locale={es}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage className="text-[10px]" />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="date"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel className="text-xs font-semibold uppercase tracking-wider text-slate-500">Fecha</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full justify-start px-4 text-left font-normal rounded-2xl h-11 bg-slate-50 border-slate-100 dark:bg-slate-800 dark:border-slate-700",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-3 h-4 w-4 text-muted-foreground" />
+                            {field.value instanceof Date ? (
+                              format(field.value, "PP", { locale: es })
+                            ) : (
+                              <span>Fecha</span>
+                            )}
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0 rounded-3xl overflow-hidden border-none shadow-2xl" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          disabled={(date) =>
+                            date > new Date() || date < new Date("1900-01-01")
+                          }
+                          initialFocus
+                          locale={es}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage className="text-[10px]" />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="time"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel className="text-xs font-semibold uppercase tracking-wider text-slate-500">Hora</FormLabel>
+                    <FormControl>
+                      <div className="relative group">
+                        <Clock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none transition-opacity group-hover:opacity-80" />
+                        <Input 
+                          type="time" 
+                          {...field} 
+                          className="rounded-2xl bg-slate-50 border-slate-100 dark:bg-slate-800 dark:border-slate-700 h-11 pl-11 pr-4 transition-all hover:bg-slate-100 dark:hover:bg-slate-800" 
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage className="text-[10px]" />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <DialogFooter className="mt-8">
               <Button 

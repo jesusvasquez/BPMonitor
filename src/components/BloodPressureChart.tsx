@@ -17,6 +17,8 @@ import type { Reading } from "@/services/bloodPressure"
 
 interface BloodPressureChartProps {
   data: Reading[]
+  rangeProp?: TimeRange
+  hideSelector?: boolean
 }
 
 type TimeRange = "day" | "week" | "month"
@@ -59,8 +61,15 @@ const CustomTooltip = ({ active, payload }: any) => {
   return null
 }
 
-export function BloodPressureChart({ data }: BloodPressureChartProps) {
-  const [range, setRange] = React.useState<TimeRange>("week")
+export function BloodPressureChart({ data, rangeProp, hideSelector = false }: BloodPressureChartProps) {
+  const [range, setRange] = React.useState<TimeRange>(rangeProp || "week")
+
+  // Sync internal range with prop if provided
+  React.useEffect(() => {
+    if (rangeProp) {
+      setRange(rangeProp)
+    }
+  }, [rangeProp])
 
   const filteredData = React.useMemo(() => {
     const now = new Date()
@@ -113,23 +122,25 @@ export function BloodPressureChart({ data }: BloodPressureChartProps) {
           <CardTitle className="text-xl font-semibold tracking-tight">Tendencias</CardTitle>
           <CardDescription>Evolución de tu presión arterial</CardDescription>
         </div>
-        <div className="flex items-center gap-1 rounded-2xl bg-slate-100/50 p-1 dark:bg-slate-800/50">
-          {(["day", "week", "month"] as const).map((r) => (
-            <Button
-              key={r}
-              variant="ghost"
-              size="sm"
-              onClick={() => setRange(r)}
-              className={`rounded-xl px-3 text-xs font-medium transition-all ${
-                range === r 
-                  ? "bg-white shadow-sm dark:bg-slate-950" 
-                  : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
-              }`}
-            >
-              {r === "day" ? "Día" : r === "week" ? "Semana" : "Mes"}
-            </Button>
-          ))}
-        </div>
+        {!hideSelector && (
+          <div className="flex items-center gap-1 rounded-2xl bg-slate-100/50 p-1 dark:bg-slate-800/50">
+            {(["day", "week", "month"] as const).map((r) => (
+              <Button
+                key={r}
+                variant="ghost"
+                size="sm"
+                onClick={() => setRange(r)}
+                className={`rounded-xl px-3 text-xs font-medium transition-all ${
+                  range === r 
+                    ? "bg-white shadow-sm dark:bg-slate-950" 
+                    : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
+                }`}
+              >
+                {r === "day" ? "Día" : r === "week" ? "Semana" : "Mes"}
+              </Button>
+            ))}
+          </div>
+        )}
       </CardHeader>
       <CardContent>
         <div id="bp-chart-container" className="h-[300px] w-full">
